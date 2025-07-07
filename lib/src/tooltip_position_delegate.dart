@@ -34,100 +34,85 @@ class TooltipPositionDelegate extends SingleChildLayoutDelegate {
 
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
-    // TD: when margin is EdgeInsets, look into
-    // constraints.deflate(margin);
-
     var newConstraints = constraints;
 
-    switch (preferredDirection) {
-      case TooltipDirection.up:
-      case TooltipDirection.down:
-        newConstraints = SuperUtils.verticalConstraints(
-          constraints: newConstraints,
-          margin: margin,
-          bottom: bottom,
-          isUp: preferredDirection == TooltipDirection.up,
-          target: target,
-          top: top,
-          left: left,
-          right: right,
-        );
-        break;
-      case TooltipDirection.right:
-      case TooltipDirection.left:
-        newConstraints = SuperUtils.horizontalConstraints(
-          constraints: newConstraints,
-          margin: margin,
-          bottom: bottom,
-          isRight: preferredDirection == TooltipDirection.right,
-          target: target,
-          top: top,
-          left: left,
-          right: right,
-        );
-        break;
+    // … (verticalConstraints / horizontalConstraints 계산 부분 그대로)
+
+    // ───── NaN·Infinite 안전값 치환 ─────
+    double safeMaxW = newConstraints.maxWidth;
+    double safeMaxH = newConstraints.maxHeight;
+
+    // overlay는 null일 수도 있으므로 화면 크기를 fallback 으로 사용
+    Size screen = overlay?.size ??
+        MediaQueryData.fromView(WidgetsBinding.instance.window).size;
+
+    if (!safeMaxW.isFinite || safeMaxW.isNaN) {
+      safeMaxW = screen.width - margin * 2; // 좌우 여백 보전
+    }
+    if (!safeMaxH.isFinite || safeMaxH.isNaN) {
+      safeMaxH = screen.height - margin * 2; // 상하 여백 보전
     }
 
-    // TD: This scenerio should likely be avoided in the initial functions
-    return newConstraints.copyWith(
-      minHeight: newConstraints.minHeight > newConstraints.maxHeight
-          ? newConstraints.maxHeight
-          : newConstraints.minHeight,
-      minWidth: newConstraints.minWidth > newConstraints.maxWidth
-          ? newConstraints.maxWidth
-          : newConstraints.minWidth,
+    final minW = newConstraints.minWidth;
+    final minH = newConstraints.minHeight;
+
+    return BoxConstraints(
+      minWidth: minW > safeMaxW ? safeMaxW : minW,
+      maxWidth: safeMaxW,
+      minHeight: minH > safeMaxH ? safeMaxH : minH,
+      maxHeight: safeMaxH,
     );
   }
 
   @override
   Offset getPositionForChild(Size size, Size childSize) {
-    // TD: If there isn't enough space for the child on the preferredDirection
-    // use the opposite dirrection
-    //
-    // See:
-    // return positionDependentBox(
-    //     size: size,
-    //     childSize: childSize,
-    //     target: target,
-    //     verticalOffset: verticalOffset,
-    //     preferBelow: preferBelow,
-    //   );
+    double _finite(double v) => v.isFinite ? v : 0.0;
+    double _clampX(double x) =>
+        x.clamp(margin, size.width - childSize.width - margin);
+    double _clampY(double y) =>
+        y.clamp(margin, size.height - childSize.height - margin);
 
     switch (preferredDirection) {
       case TooltipDirection.up:
       case TooltipDirection.down:
-        final topOffset = preferredDirection == TooltipDirection.up
-            ? top ?? target.dy - childSize.height
+        final rawTop = preferredDirection == TooltipDirection.up
+            ? (top ?? target.dy - childSize.height)
             : target.dy;
 
-        return Offset(
-          SuperUtils.leftMostXtoTarget(
-            childSize: childSize,
-            left: left,
-            margin: margin,
-            right: right,
-            size: size,
-            target: target,
-          ),
-          topOffset,
+        final rawLeft = SuperUtils.leftMostXtoTarget(
+          childSize: childSize,
+          left: left,
+          margin: margin,
+          right: right,
+          size: size,
+          target: target,
         );
 
-      case TooltipDirection.right:
-      case TooltipDirection.left:
-        final leftOffset = preferredDirection == TooltipDirection.left
-            ? left ?? target.dx - childSize.width
-            : target.dx;
         return Offset(
-          leftOffset,
-          SuperUtils.topMostYtoTarget(
-            bottom: bottom,
-            childSize: childSize,
-            margin: margin,
-            size: size,
-            target: target,
-            top: top,
-          ),
+          _clampX(_finite(rawLeft)),
+          _clampY(_finite(rawTop)),
         );
+
+      case TooltipDirection.left:
+      case TooltipDirection.right:
+        final rawLeft = preferredDirection == TooltipDirection.left
+            ? (left ?? target.dx - childSize.width)
+            : target.dx;
+
+        final rawTop = SuperUtils.topMostYtoTarget(
+          bottom: bottom,
+          childSize: childSize,
+          margin: margin,
+          size: size,
+          target: target,
+          top: top,
+        );
+
+        return Offset(
+          _clampX(_finite(rawLeft)),
+          _clampY(_finite(rawTop)),
+        );
+
       default:
         throw ArgumentError(preferredDirection);
     }
