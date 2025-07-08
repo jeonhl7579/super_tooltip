@@ -532,7 +532,19 @@ class _SuperTooltipState extends State<SuperTooltip>
   /// The order of insertion is: blur filter overlay entry, barrier overlay entry, and tooltip overlay entry.
   void _createOverlayEntries() {
     // Find the render box of the widget.
-    final renderBox = context.findRenderObject() as RenderBox;
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null || renderBox.size.isEmpty) return; // 크기 0×0
+
+    final size = renderBox.size;
+    final target = renderBox.localToGlobal(size.center(Offset.zero));
+
+    // ② 좌표 NaN/∞ 또는 화면 밖이면 show 건너뜀
+    if (!target.dx.isFinite || !target.dy.isFinite) return;
+    final screen = MediaQueryData.fromView(WidgetsBinding.instance.window).size;
+    if (target.dx < 0 ||
+        target.dy < 0 ||
+        target.dx > screen.width ||
+        target.dy > screen.height) return;
 
     // Find the overlay state.
     final overlayState = Overlay.of(context);
@@ -546,10 +558,10 @@ class _SuperTooltipState extends State<SuperTooltip>
     }
 
     // Calculate the size of the widget.
-    final size = renderBox.size;
+    // final size = renderBox.size;
 
-    // Calculate the target position relative to the global coordinate system.
-    final target = renderBox.localToGlobal(size.center(Offset.zero));
+    // // Calculate the target position relative to the global coordinate system.
+    // final target = renderBox.localToGlobal(size.center(Offset.zero));
     final animation = CurvedAnimation(
       parent: _animationController,
       curve: Curves.fastOutSlowIn,
