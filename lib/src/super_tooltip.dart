@@ -554,7 +554,13 @@ class _SuperTooltipState extends State<SuperTooltip>
       parent: _animationController,
       curve: Curves.fastOutSlowIn,
     );
-    final offsetToTarget = Offset(
+    Offset _finiteOffset(double x, double y) {
+      if (!x.isFinite || x.isNaN) x = 0.0;
+      if (!y.isFinite || y.isNaN) y = 0.0;
+      return Offset(x, y);
+    }
+
+    final offsetToTarget = _finiteOffset(
       -target.dx + size.width / 2,
       -target.dy + size.height / 2,
     );
