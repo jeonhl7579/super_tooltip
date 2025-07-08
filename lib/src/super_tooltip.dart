@@ -604,6 +604,13 @@ class _SuperTooltipState extends State<SuperTooltip>
         left = 0.0;
       }
     }
+    // overlay RenderBox (null 허용)
+    final RenderBox? overlayBox =
+        overlayState.context.findRenderObject() as RenderBox?;
+
+// 화면 또는 오버레이 크기 → Size 값만 캡처
+    final Size overlaySize = overlayBox?.size ??
+        MediaQueryData.fromView(WidgetsBinding.instance.window).size;
 
     _barrierEntry = showBarrier
         ? OverlayEntry(
@@ -667,7 +674,7 @@ class _SuperTooltipState extends State<SuperTooltip>
                   right: right,
                   target: target,
                   // verticalOffset: widget.verticalOffset,
-                  overlay: overlay,
+                  overlaySize: overlaySize,
                   margin: widget.minimumOutsideMargin,
                   snapsFarAwayHorizontally: widget.snapsFarAwayHorizontally,
                   snapsFarAwayVertically: widget.snapsFarAwayVertically,

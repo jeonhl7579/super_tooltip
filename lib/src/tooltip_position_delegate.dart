@@ -15,42 +15,63 @@ class TooltipPositionDelegate extends SingleChildLayoutDelegate {
     required this.left,
     required this.right,
     required this.target,
-    // @required this.verticalOffset,
-    required this.overlay,
+    // verticalOffset 생략
+    required this.overlaySize, // ← RenderBox 대신 Size
   });
-  // assert(verticalOffset != null);
 
+  // ───────────────────────── stored data ─────────────────────────
   final bool snapsFarAwayVertically;
   final bool snapsFarAwayHorizontally;
-  // TD: Make this EdgeInsets
   final double margin;
   final Offset target;
-  // final double verticalOffset;
-  final RenderBox? overlay;
+  final Size overlaySize; // ← 화면·오버레이 크기
   final BoxConstraints constraints;
-
   final TooltipDirection preferredDirection;
   final double? top, bottom, left, right;
 
+  // ─────────────────────── constraints 계산 ──────────────────────
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
     var newConstraints = constraints;
 
-    // … (verticalConstraints / horizontalConstraints 계산 부분 그대로)
+    switch (preferredDirection) {
+      case TooltipDirection.up:
+      case TooltipDirection.down:
+        newConstraints = SuperUtils.verticalConstraints(
+          constraints: newConstraints,
+          margin: margin,
+          bottom: bottom,
+          isUp: preferredDirection == TooltipDirection.up,
+          target: target,
+          top: top,
+          left: left,
+          right: right,
+        );
+        break;
+      case TooltipDirection.right:
+      case TooltipDirection.left:
+        newConstraints = SuperUtils.horizontalConstraints(
+          constraints: newConstraints,
+          margin: margin,
+          bottom: bottom,
+          isRight: preferredDirection == TooltipDirection.right,
+          target: target,
+          top: top,
+          left: left,
+          right: right,
+        );
+        break;
+    }
 
-    // ───── NaN·Infinite 안전값 치환 ─────
+    // NaN·∞ 안전값 치환 ────────────────────────────────
     double safeMaxW = newConstraints.maxWidth;
     double safeMaxH = newConstraints.maxHeight;
 
-    // overlay는 null일 수도 있으므로 화면 크기를 fallback 으로 사용
-    Size screen = overlay?.size ??
-        MediaQueryData.fromView(WidgetsBinding.instance.window).size;
-
     if (!safeMaxW.isFinite || safeMaxW.isNaN) {
-      safeMaxW = screen.width - margin * 2; // 좌우 여백 보전
+      safeMaxW = overlaySize.width - margin * 2;
     }
     if (!safeMaxH.isFinite || safeMaxH.isNaN) {
-      safeMaxH = screen.height - margin * 2; // 상하 여백 보전
+      safeMaxH = overlaySize.height - margin * 2;
     }
 
     final minW = newConstraints.minWidth;
@@ -64,13 +85,14 @@ class TooltipPositionDelegate extends SingleChildLayoutDelegate {
     );
   }
 
+  // ─────────────────────── 위치 계산 ─────────────────────────────
   @override
   Offset getPositionForChild(Size size, Size childSize) {
     double _finite(double v) => v.isFinite ? v : 0.0;
     double _clampX(double x) =>
-        x.clamp(margin, size.width - childSize.width - margin);
+        x.clamp(margin, overlaySize.width - childSize.width - margin);
     double _clampY(double y) =>
-        y.clamp(margin, size.height - childSize.height - margin);
+        y.clamp(margin, overlaySize.height - childSize.height - margin);
 
     switch (preferredDirection) {
       case TooltipDirection.up:
