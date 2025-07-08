@@ -34,6 +34,13 @@ class BubbleShape extends ShapeBorder {
 
   @override
   EdgeInsetsGeometry get dimensions => bubbleDimensions;
+  Offset _finiteOffset(double x, double y) {
+    if (!x.isFinite || x.isNaN) x = 0;
+    if (!y.isFinite || y.isNaN) y = 0;
+    return Offset(x, y);
+  }
+
+  double _finite(double v) => (v.isFinite && !v.isNaN) ? v : 0.0;
 
   @override
   Path getInnerPath(Rect rect, {TextDirection? textDirection}) => Path()
@@ -50,29 +57,29 @@ class BubbleShape extends ShapeBorder {
 
     Path getLeftTopPath(Rect rect) => Path()
       ..moveTo(rect.left, rect.bottom - bottomLeftRadius)
-      ..lineTo(rect.left, rect.top + topLeftRadius)
+      ..lineTo(_finite(rect.left), _finite(rect.top + topLeftRadius))
       ..arcToPoint(
-        Offset(rect.left + topLeftRadius, rect.top),
+        _finiteOffset(rect.left + topLeftRadius, rect.top),
         radius: Radius.circular(topLeftRadius),
       )
-      ..lineTo(rect.right - topRightRadius, rect.top)
+      ..lineTo(_finite(rect.right - topRightRadius), _finite(rect.top))
       ..arcToPoint(
-        Offset(rect.right, rect.top + topRightRadius),
+        _finiteOffset(rect.right, rect.top + topRightRadius),
         radius: Radius.circular(topRightRadius),
         clockwise: true,
       );
 
     Path getBottomRightPath(Rect rect) => Path()
       ..moveTo(rect.left + bottomLeftRadius, rect.bottom)
-      ..lineTo(rect.right - bottomRightRadius, rect.bottom)
+      ..lineTo(_finite(rect.right - bottomRightRadius), _finite(rect.bottom))
       ..arcToPoint(
-        Offset(rect.right, rect.bottom - bottomRightRadius),
+        _finiteOffset(rect.right, rect.bottom - bottomRightRadius),
         radius: Radius.circular(bottomRightRadius),
         clockwise: false,
       )
-      ..lineTo(rect.right, rect.top + topRightRadius)
+      ..lineTo(_finite(rect.right), _finite(rect.top + topRightRadius))
       ..arcToPoint(
-        Offset(rect.right - topRightRadius, rect.top),
+        _finiteOffset(rect.right - topRightRadius, rect.top),
         radius: Radius.circular(topRightRadius),
         clockwise: false,
       );
@@ -86,78 +93,94 @@ class BubbleShape extends ShapeBorder {
       case TooltipDirection.down:
         return getBottomRightPath(rect)
           ..lineTo(
-            min(
-              max(
-                target.dx + arrowBaseWidth / 2,
-                rect.left + borderRadius + arrowBaseWidth,
+            _finite(
+              min(
+                max(
+                  target.dx + arrowBaseWidth / 2,
+                  rect.left + borderRadius + arrowBaseWidth,
+                ),
+                rect.right - topRightRadius,
               ),
-              rect.right - topRightRadius,
             ),
-            rect.top,
+            _finite(rect.top),
           )
           // up to arrow tip where the curve starts
           ..lineTo(
-              target.dx + arrowTipRadius / sqrt(2), //sin and cos 45 = 1/root(2)
-              target.dy +
-                  arrowTipDistance -
-                  (arrowTipRadius - arrowTipRadius / sqrt(2)))
+            _finite(target.dx +
+                arrowTipRadius / sqrt(2)), //sin and cos 45 = 1/root(2)
+            _finite(target.dy +
+                arrowTipDistance -
+                (arrowTipRadius - arrowTipRadius / sqrt(2))),
+          )
 
           //arc for the tip
           ..arcToPoint(
-              Offset(
-                  target.dx - arrowTipRadius / sqrt(2),
-                  target.dy +
-                      arrowTipDistance -
-                      (arrowTipRadius - arrowTipRadius / sqrt(2))),
+              _finiteOffset(
+                target.dx - arrowTipRadius / sqrt(2),
+                target.dy +
+                    arrowTipDistance -
+                    (arrowTipRadius - arrowTipRadius / sqrt(2)),
+              ),
               radius: Radius.circular(arrowTipRadius),
               clockwise: false)
 
           //  down /
           ..lineTo(
-            max(
+            _finite(max(
               min(
                 target.dx - arrowBaseWidth / 2,
                 rect.right - topLeftRadius - arrowBaseWidth,
               ),
               rect.left + topLeftRadius,
-            ),
-            rect.top,
+            )),
+            _finite(rect.top),
           )
-          ..lineTo(rect.left + topLeftRadius, rect.top)
+          ..lineTo(_finite(rect.left + topLeftRadius), _finite(rect.top))
           ..arcToPoint(
-            Offset(rect.left, rect.top + topLeftRadius),
+            _finiteOffset(rect.left, rect.top + topLeftRadius),
             radius: Radius.circular(topLeftRadius),
             clockwise: false,
           )
-          ..lineTo(rect.left, rect.bottom - bottomLeftRadius)
+          ..lineTo(_finite(rect.left), _finite(rect.bottom - bottomLeftRadius))
           ..arcToPoint(
-            Offset(rect.left + bottomLeftRadius, rect.bottom),
+            _finiteOffset(rect.left + bottomLeftRadius, rect.bottom),
             radius: Radius.circular(bottomLeftRadius),
             clockwise: false,
           );
 
       case TooltipDirection.up:
         return getLeftTopPath(rect)
-          ..lineTo(rect.right, rect.bottom - bottomRightRadius)
-          ..arcToPoint(Offset(rect.right - bottomRightRadius, rect.bottom),
-              radius: Radius.circular(bottomRightRadius), clockwise: true)
           ..lineTo(
+              _finite(rect.right), _finite(rect.bottom - bottomRightRadius))
+          ..arcToPoint(
+              _finiteOffset(rect.right - bottomRightRadius, rect.bottom),
+              radius: Radius.circular(bottomRightRadius),
+              clockwise: true)
+          ..lineTo(
+            _finite(
               min(
-                  max(target.dx + arrowBaseWidth / 2,
-                      rect.left + bottomLeftRadius + arrowBaseWidth),
-                  rect.right - bottomRightRadius),
-              rect.bottom)
+                max(
+                  target.dx + arrowBaseWidth / 2,
+                  rect.left + bottomLeftRadius + arrowBaseWidth,
+                ),
+                rect.right - bottomRightRadius,
+              ),
+            ),
+            _finite(rect.bottom),
+          )
 
           // down to arrow tip curvature start\
           ..lineTo(
-              target.dx + arrowTipRadius / sqrt(2), //sin and cos 45 = 1/root(2)
-              target.dy -
-                  arrowTipDistance +
-                  (arrowTipRadius - arrowTipRadius / sqrt(2)))
+            _finite(target.dx +
+                arrowTipRadius / sqrt(2)), //sin and cos 45 = 1/root(2)
+            _finite(target.dy -
+                arrowTipDistance +
+                (arrowTipRadius - arrowTipRadius / sqrt(2))),
+          )
 
           //arc for the tip
           ..arcToPoint(
-              Offset(
+              _finiteOffset(
                   target.dx - arrowTipRadius / sqrt(2),
                   target.dy -
                       arrowTipDistance +
@@ -166,37 +189,48 @@ class BubbleShape extends ShapeBorder {
 
           //  up /
           ..lineTo(
+            _finite(
               max(
-                  min(target.dx - arrowBaseWidth / 2,
-                      rect.right - bottomRightRadius - arrowBaseWidth),
-                  rect.left + bottomLeftRadius),
-              rect.bottom)
-          ..lineTo(rect.left + bottomLeftRadius, rect.bottom)
-          ..arcToPoint(Offset(rect.left, rect.bottom - bottomLeftRadius),
+                min(
+                  target.dx - arrowBaseWidth / 2,
+                  rect.right - bottomRightRadius - arrowBaseWidth,
+                ),
+                rect.left + bottomLeftRadius,
+              ),
+            ),
+            _finite(rect.bottom),
+          )
+          ..lineTo(_finite(rect.left + bottomLeftRadius), _finite(rect.bottom))
+          ..arcToPoint(_finiteOffset(rect.left, rect.bottom - bottomLeftRadius),
               radius: Radius.circular(bottomLeftRadius), clockwise: true)
-          ..lineTo(rect.left, rect.top + topLeftRadius)
-          ..arcToPoint(Offset(rect.left + topLeftRadius, rect.top),
+          ..lineTo(_finite(rect.left), _finite(rect.top + topLeftRadius))
+          ..arcToPoint(_finiteOffset(rect.left + topLeftRadius, rect.top),
               radius: Radius.circular(topLeftRadius), clockwise: true);
 
       case TooltipDirection.left:
         return getLeftTopPath(rect)
           ..lineTo(
-              rect.right,
+            _finite(rect.right),
+            _finite(
               max(
-                  min(target.dy - arrowBaseWidth / 2,
-                      rect.bottom - bottomRightRadius - arrowBaseWidth),
-                  rect.top + topRightRadius))
+                min(target.dy - arrowBaseWidth / 2,
+                    rect.bottom - bottomRightRadius - arrowBaseWidth),
+                rect.top + topRightRadius,
+              ),
+            ),
+          )
 
           // right to arrow tip to the start point of the arc \
           ..lineTo(
-              target.dx -
-                  arrowTipDistance +
-                  (arrowTipRadius - arrowTipRadius / sqrt(2)),
-              target.dy - arrowTipRadius / sqrt(2))
+            _finite(target.dx -
+                arrowTipDistance +
+                (arrowTipRadius - arrowTipRadius / sqrt(2))),
+            _finite(target.dy - arrowTipRadius / sqrt(2)),
+          )
 
           //arc for the tip
           ..arcToPoint(
-            Offset(
+            _finiteOffset(
               target.dx -
                   arrowTipDistance +
                   (arrowTipRadius - arrowTipRadius / sqrt(2)),
@@ -207,39 +241,41 @@ class BubbleShape extends ShapeBorder {
 
           //  left /
           ..lineTo(
-              rect.right,
-              min(target.dy + arrowBaseWidth / 2,
-                  rect.bottom - bottomRightRadius))
-          ..lineTo(rect.right, rect.bottom - borderRadius)
-          ..arcToPoint(Offset(rect.right - bottomRightRadius, rect.bottom),
-              radius: Radius.circular(bottomRightRadius), clockwise: true)
-          ..lineTo(rect.left + bottomLeftRadius, rect.bottom)
-          ..arcToPoint(Offset(rect.left, rect.bottom - bottomLeftRadius),
+              _finite(rect.right),
+              _finite(min(target.dy + arrowBaseWidth / 2,
+                  rect.bottom - bottomRightRadius)))
+          ..lineTo(_finite(rect.right), _finite(rect.bottom - borderRadius))
+          ..arcToPoint(
+              _finiteOffset(rect.right - bottomRightRadius, rect.bottom),
+              radius: Radius.circular(bottomRightRadius),
+              clockwise: true)
+          ..lineTo(_finite(rect.left + bottomLeftRadius), _finite(rect.bottom))
+          ..arcToPoint(_finiteOffset(rect.left, rect.bottom - bottomLeftRadius),
               radius: Radius.circular(bottomLeftRadius), clockwise: true);
 
       case TooltipDirection.right:
         return getBottomRightPath(rect)
-          ..lineTo(rect.left + topLeftRadius, rect.top)
-          ..arcToPoint(Offset(rect.left, rect.top + topLeftRadius),
+          ..lineTo(_finite(rect.left + topLeftRadius), _finite(rect.top))
+          ..arcToPoint(_finiteOffset(rect.left, rect.top + topLeftRadius),
               radius: Radius.circular(topLeftRadius), clockwise: false)
           ..lineTo(
-              rect.left,
-              max(
+              _finite(rect.left),
+              _finite(max(
                   min(target.dy - arrowBaseWidth / 2,
                       rect.bottom - bottomLeftRadius - arrowBaseWidth),
-                  rect.top + topLeftRadius))
+                  rect.top + topLeftRadius)))
 
           //left to arrow tip till curve start/
 
           ..lineTo(
-              target.dx +
+              _finite(target.dx +
                   arrowTipDistance -
-                  (arrowTipRadius - arrowTipRadius / sqrt(2)),
-              target.dy - arrowTipRadius / sqrt(2))
+                  (arrowTipRadius - arrowTipRadius / sqrt(2))),
+              _finite(target.dy - arrowTipRadius / sqrt(2)))
 
           //arc for the tip
           ..arcToPoint(
-              Offset(
+              _finiteOffset(
                   target.dx +
                       arrowTipDistance -
                       (arrowTipRadius - arrowTipRadius / sqrt(2)),
@@ -249,11 +285,11 @@ class BubbleShape extends ShapeBorder {
 
           //  right \
           ..lineTo(
-              rect.left,
-              min(target.dy + arrowBaseWidth / 2,
-                  rect.bottom - bottomLeftRadius))
-          ..lineTo(rect.left, rect.bottom - bottomLeftRadius)
-          ..arcToPoint(Offset(rect.left + bottomLeftRadius, rect.bottom),
+              _finite(rect.left),
+              _finite(min(target.dy + arrowBaseWidth / 2,
+                  rect.bottom - bottomLeftRadius)))
+          ..lineTo(_finite(rect.left), _finite(rect.bottom - bottomLeftRadius))
+          ..arcToPoint(_finiteOffset(rect.left + bottomLeftRadius, rect.bottom),
               radius: Radius.circular(bottomLeftRadius), clockwise: false);
 
       default:
