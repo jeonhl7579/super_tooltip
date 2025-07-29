@@ -208,50 +208,59 @@ class BubbleShape extends ShapeBorder {
               radius: Radius.circular(topLeftRadius), clockwise: true);
 
       case TooltipDirection.left:
+        const double _rt2 = 1.4142135623730951; // sqrt(2)
+        final double availHeight =
+            (rect.bottom - bottomRightRadius) - (rect.top + topRightRadius);
+        final double halfWanted = arrowBaseWidth / 2;
+
+        // 코너 반경을 뺀 직선 구간에서 허용되는 최대 half 폭
+        final double halfMax = availHeight > 0 ? (availHeight / 2) : 0;
+        final double half = halfMax > 0 ? min(halfWanted, halfMax) : 0;
+
+        // 중심을 코너 반경+half 안쪽으로 clamp
+        final double minCy = rect.top + topRightRadius + half;
+        final double maxCy = rect.bottom - bottomRightRadius - half;
+        final double cy = _finite(target.dy.clamp(minCy, maxCy));
+
+        final double y1 = _finite(cy - half);
+        final double y2 = _finite(cy + half);
+
+        // 팁의 x/y (팁 곡률은 중심 cy 기준으로)
+        final double tipBaseX = _finite(
+          target.dx -
+              arrowTipDistance +
+              (arrowTipRadius - arrowTipRadius / _rt2),
+        );
+        final double tipY1 = _finite(cy - arrowTipRadius / _rt2);
+        final double tipY2 = _finite(cy + arrowTipRadius / _rt2);
+
         return getLeftTopPath(rect)
-          ..lineTo(
-            _finite(rect.right),
-            _finite(
-              max(
-                min(target.dy - arrowBaseWidth / 2,
-                    rect.bottom - bottomRightRadius - arrowBaseWidth),
-                rect.top + topRightRadius,
-              ),
-            ),
-          )
+          // 오른쪽 변에서 화살표 밑변 시작점(y1)까지
+          ..lineTo(_finite(rect.right), y1)
 
-          // right to arrow tip to the start point of the arc \
-          ..lineTo(
-            _finite(target.dx -
-                arrowTipDistance +
-                (arrowTipRadius - arrowTipRadius / sqrt(2))),
-            _finite(target.dy - arrowTipRadius / sqrt(2)),
-          )
-
-          //arc for the tip
+          // 팁 곡률 시작
+          ..lineTo(tipBaseX, tipY1)
           ..arcToPoint(
-            _finiteOffset(
-              target.dx -
-                  arrowTipDistance +
-                  (arrowTipRadius - arrowTipRadius / sqrt(2)),
-              target.dy + arrowTipRadius / sqrt(2),
-            ),
+            _finiteOffset(tipBaseX, tipY2),
             radius: Radius.circular(arrowTipRadius),
           )
 
-          //  left /
-          ..lineTo(
-              _finite(rect.right),
-              _finite(min(target.dy + arrowBaseWidth / 2,
-                  rect.bottom - bottomRightRadius)))
+          // 밑변 끝(y2)까지
+          ..lineTo(_finite(rect.right), y2)
+
+          // 나머지 테두리 이어서 마감
           ..lineTo(_finite(rect.right), _finite(rect.bottom - borderRadius))
           ..arcToPoint(
-              _finiteOffset(rect.right - bottomRightRadius, rect.bottom),
-              radius: Radius.circular(bottomRightRadius),
-              clockwise: true)
+            _finiteOffset(rect.right - bottomRightRadius, rect.bottom),
+            radius: Radius.circular(bottomRightRadius),
+            clockwise: true,
+          )
           ..lineTo(_finite(rect.left + bottomLeftRadius), _finite(rect.bottom))
-          ..arcToPoint(_finiteOffset(rect.left, rect.bottom - bottomLeftRadius),
-              radius: Radius.circular(bottomLeftRadius), clockwise: true);
+          ..arcToPoint(
+            _finiteOffset(rect.left, rect.bottom - bottomLeftRadius),
+            radius: Radius.circular(bottomLeftRadius),
+            clockwise: true,
+          );
 
       case TooltipDirection.right:
         return getBottomRightPath(rect)
